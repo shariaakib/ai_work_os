@@ -69,10 +69,15 @@ class WorkGraph:
         result = graph.query("What is blocking Project Phoenix?")
     """
 
-    def __init__(self, db_path: str = "data/work_graph.json"):
+    # Overridable at runtime (tests set this to a temp dir).
+    default_db_path = "data/work_graph.json"
+
+    def __init__(self, db_path: Optional[str] = None):
         self.nodes: Dict[str, WorkNode] = {}
         self.relations: List[WorkRelation] = []
-        self.db_path = Path(db_path)
+        # Default path is looked up at runtime so tests can override it
+        # (see tests/conftest.py) instead of being frozen at class creation.
+        self.db_path = Path(db_path) if db_path else Path(self.default_db_path)
         self._load()
 
     def add_node(self, node: WorkNode):

@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from src.core.ai_manager import AIManager, Plan
+from src.core.llm_client import LLMClient
 from src.core.work_graph import WorkGraph, WorkNode
 from src.core.memory import WorkMemory
 from src.agents.specialist_agents import (
@@ -45,7 +46,8 @@ class AIWorkOS:
         self.verifier = Verifier()
 
         # AI Manager
-        self.manager = AIManager()
+        self.llm = LLMClient()
+        self.manager = AIManager(llm=self.llm)
 
         # Register specialist agents
         self._register_agents()
@@ -106,6 +108,19 @@ class AIWorkOS:
 def main():
     """Main entry point."""
     os = AIWorkOS()
+
+    if "--chat" in sys.argv:
+        # Phase 2 quick test: type a message, AI answers.
+        # Usage: python main.py --chat
+        print("\n🤖 AI chat started. Type 'exit' to quit.")
+        while True:
+            user_input = input("You: ").strip()
+            if user_input.lower() in ("exit", "quit", "q"):
+                break
+            if user_input:
+                reply = os.llm.chat(messages=[{"role": "user", "content": user_input}])
+                print(f"AI: {reply}")
+        return
 
     if len(sys.argv) > 1:
         # Process a single goal from command line

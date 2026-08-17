@@ -58,10 +58,15 @@ class WorkMemory:
         all_prefs = memory.get_by_category("preference")
     """
 
-    def __init__(self, db_path: str = "data/memory.json", max_items: int = 1000):
+    # Overridable at runtime (tests set this to a temp dir).
+    default_db_path = "data/memory.json"
+
+    def __init__(self, db_path: Optional[str] = None, max_items: int = 1000):
         self.items: Dict[str, MemoryItem] = {}
         self.max_items = max_items
-        self.db_path = Path(db_path)
+        # Default path is looked up at runtime so tests can override it
+        # (see tests/conftest.py) instead of being frozen at class creation.
+        self.db_path = Path(db_path) if db_path else Path(self.default_db_path)
         self._load()
 
     def remember(

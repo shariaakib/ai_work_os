@@ -4,10 +4,13 @@ Configuration settings for AI Work OS.
 Uses environment variables with sensible defaults.
 """
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from typing import Optional
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
+
     # AI Model Configuration
     ai_provider: str = "openai"  # openai, anthropic, openrouter
     ai_model: str = "gpt-4"
@@ -36,10 +39,6 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
     log_file: Optional[str] = None
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 settings = Settings()
