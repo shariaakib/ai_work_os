@@ -1,0 +1,22 @@
+{
+  "email_style": {
+    "key": "email_style",
+    "content": "Keep emails short",
+    "category": "preference",
+    "tags": [],
+    "source": "user",
+    "created_at": "2026-08-18T02:39:17.953999",
+    "updated_at": "2026-08-18T02:39:17.953999"
+  },
+  "pref1": {
+    "key": "pref1",
+    "content": "I like short meetings",
+    "category": "preference",
+    "tags": [
+      "meetings"
+    ],
+    "source": "user",
+    "created_at": "2026-08-18T02:39:17.953999",
+    "updated_at": "2026-08-18T02:39:17.953999"
+  }
+}
