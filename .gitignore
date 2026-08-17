@@ -22,3 +22,12 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Project specific
+*.db
+*.sqlite
+logs/

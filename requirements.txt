@@ -1,0 +1,22 @@
+# AI Work OS - Development Dependencies
+
+# Core
+pydantic>=2.0.0
+httpx>=0.27.0
+pydantic-settings>=2.0.0
+
+# AI / API
+openai>=1.0.0
+anthropic>=0.30.0
+
+# Web / Scraping
+beautifulsoup4>=4.12.0
+selenium>=4.15.0
+
+# Utilities
+python-dotenv>=1.0.0
+rich>=13.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
