@@ -1,21 +1,33 @@
 """
 Tests for the LLM Client (Phase 2) and AI planning.
+
+NOTE: To test the "no key" behavior even though the developer's real
+OPENROUTER_API_KEY exists in .env, we temporarily set it to None.
 """
 
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add project root and src to path
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
+import config.settings as settings_module
 from src.core.ai_manager import AIManager
 from src.core.llm_client import LLMClient
 
 
+@pytest.fixture
+def no_api_key(monkeypatch):
+    """Pretend there is no API key configured anywhere."""
+    monkeypatch.setattr(settings_module.settings, "openrouter_api_key", None)
+
+
 class TestLLMClient:
-    def test_not_configured_without_key(self):
+    def test_not_configured_without_key(self, no_api_key):
         """Without an API key, the client must refuse to call the AI."""
         client = LLMClient(api_key=None)
         assert client.is_configured() is False
@@ -25,7 +37,7 @@ class TestLLMClient:
         client = LLMClient(api_key="sk-or-test")
         assert client.is_configured() is True
 
-    def test_chat_raises_without_key(self):
+    def test_chat_raises_without_key(self, no_api_key):
         """Calling chat() without a key must raise a helpful error."""
         client = LLMClient(api_key=None)
         try:

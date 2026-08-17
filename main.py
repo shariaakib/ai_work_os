@@ -8,6 +8,13 @@ An AI-native operating system for professional work.
 import sys
 from pathlib import Path
 
+# Fix emoji/unicode on Windows: force UTF-8 output even when stdout is a
+# pipe (default cp1252 can't encode emoji like 🚀 and crashes).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
@@ -114,6 +121,8 @@ def main():
         # Usage: python main.py --chat
         print("\n🤖 AI chat started. Type 'exit' to quit.")
         while True:
+            # Support piped input (e.g. `echo "hi" | python main.py --chat`)
+            # so the AI can be tested non-interactively.
             user_input = input("You: ").strip()
             if user_input.lower() in ("exit", "quit", "q"):
                 break
