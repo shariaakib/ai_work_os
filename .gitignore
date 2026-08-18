@@ -32,6 +32,10 @@ Thumbs.db
 *.sqlite
 logs/
 
+# Runtime data (ephemeral; produced by tests/dev runs)
+data/*.json
+!data/.gitkeep
+
 # Temp / test artifacts
 _*.log
 _*.txt

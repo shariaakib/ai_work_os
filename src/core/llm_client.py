@@ -26,18 +26,25 @@ class LLMClient:
         self,
         api_key=_SENTINEL,
         base_url=settings.openrouter_base_url,
-        model="openai/gpt-4o-mini",
-        temperature=0.7,
-        max_tokens=2048,
+        model=None,
+        temperature=None,
+        max_tokens=None,
         timeout=None,
     ):
         self.api_key = (
             settings.effective_api_key if api_key is _SENTINEL else api_key
         )
         self.base_url = base_url
-        self.model = model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
+        # Model / sampling fall back to env-driven settings so a single
+        # OPENROUTER_MODEL / AI_TEMPERATURE / AI_MAX_TOKENS change in .env or
+        # the host (Render) is all that's needed — no code edit.
+        self.model = model or settings.openrouter_model
+        self.temperature = (
+            settings.ai_temperature if temperature is None else temperature
+        )
+        self.max_tokens = (
+            settings.ai_max_tokens if max_tokens is None else max_tokens
+        )
         self.timeout = timeout or self.DEFAULT_TIMEOUT
         self._client = None
         if self.api_key:

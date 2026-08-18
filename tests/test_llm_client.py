@@ -33,6 +33,24 @@ class TestLLMClient:
         with pytest.raises(RuntimeError) as excinfo:
             client.chat(messages=[{"role": "user", "content": "hi"}])
         assert "OPENROUTER_API_KEY" in str(excinfo.value)
+
+    def test_model_defaults_to_settings(self):
+        """No explicit model should resolve to the env-driven settings model."""
+        from config.settings import settings
+        client = LLMClient(api_key=None)
+        assert client.model == settings.openrouter_model
+
+    def test_explicit_model_overrides_settings(self):
+        """An explicit model arg must win over the settings default."""
+        client = LLMClient(api_key=None, model="openai/gpt-4o-mini")
+        assert client.model == "openai/gpt-4o-mini"
+
+    def test_sampling_params_from_settings(self):
+        """temperature / max_tokens should come from settings when not given."""
+        from config.settings import settings
+        client = LLMClient(api_key=None)
+        assert client.temperature == settings.ai_temperature
+        assert client.max_tokens == settings.ai_max_tokens
 class _FakeLLM:
     """A fake LLM that returns a canned JSON plan (no internet needed)."""
     def __init__(self, reply: str):

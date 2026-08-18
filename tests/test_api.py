@@ -16,9 +16,25 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture(scope="module")
 def client():
-    """Create a TestClient for the FastAPI app."""
-    from app.server import app
-    return TestClient(app)
+    """Create a TestClient for the FastAPI app.
+
+    Tests must be hermetic: we force the app's LLM to an unconfigured client
+    so no test ever depends on the network, a live API key, or OpenRouter
+    rate limits. Endpoints then exercise their real code paths (chat -> 503,
+    plan -> empty plan) deterministically.
+    """
+    from src.core.llm_client import LLMClient
+    import app.server as server
+
+    # Context manager form runs the lifespan (creates server.state) so we can
+    # swap in an offline LLM before any request handler runs.
+    with TestClient(server.app) as c:
+        if server.state is not None:
+            offline = LLMClient(api_key=None)
+            server.state.llm = offline
+            server.state.manager.llm = offline
+            server.state.work_graph.set_llm(offline)
+        yield c
 
 
 class TestHealthEndpoint:
@@ -32,6 +48,32 @@ class TestHealthEndpoint:
         assert data["status"] == "ok"
         assert "configured" in data
         assert isinstance(data["configured"], bool)
+
+    def test_health_includes_model(self, client):
+        """Health should expose the active model for observability."""
+        response = client.get("/api/health")
+        data = response.json()
+        assert "model" in data
+        assert isinstance(data["model"], str)
+        assert data["model"] != ""
+
+
+class TestModelsEndpoint:
+    """Test /api/models curated model list."""
+
+    def test_models_endpoint(self, client):
+        """Should return active model and curated free/paid lists."""
+        response = client.get("/api/models")
+        assert response.status_code == 200
+        data = response.json()
+        assert "active_model" in data
+        assert "free" in data
+        assert "paid" in data
+        assert isinstance(data["free"], list)
+        assert isinstance(data["paid"], list)
+        # All curated free models must use the :free suffix
+        for m in data["free"]:
+            assert m.endswith(":free")
 
 
 class TestAgentsEndpoint:

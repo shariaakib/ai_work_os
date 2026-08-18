@@ -181,8 +181,37 @@ def health():
         "status": "ok",
         "version": VERSION,
         "configured": st.llm.is_configured(),
+        "model": st.llm.model,
         "environment": os.getenv("ENVIRONMENT", "development"),
         "agents": len(st.manager.agent_registry),
+    }
+
+
+@app.get("/api/models")
+def list_models():
+    """Curated OpenRouter models that work with this app.
+
+    Free-tier (":free") models cost nothing but are rate-limited; paid models
+    give higher limits. Change the active model with the OPENROUTER_MODEL env
+    var — no code edit or redeploy required, just restart.
+    """
+    st = _require_state()
+    free = [
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "deepseek/deepseek-chat-v3.1:free",
+        "qwen/qwen3-coder:free",
+        "google/gemma-3-27b-it:free",
+    ]
+    paid = [
+        "openai/gpt-4o-mini",
+        "anthropic/claude-3.5-haiku",
+        "google/gemini-2.0-flash-001",
+    ]
+    return {
+        "active_model": st.llm.model,
+        "configured": st.llm.is_configured(),
+        "free": free,
+        "paid": paid,
     }
 
 

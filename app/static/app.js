@@ -24,12 +24,15 @@ async function checkHealth() {
   const el = $("status");
   try {
     const d = await api("/api/health");
+    const model = d.model ? String(d.model).split("/").pop() : "";
     if (d.configured) {
-      el.textContent = "online";
+      el.textContent = "online" + (model ? " · " + model : "");
       el.className = "online";
+      el.title = "Model: " + (d.model || "unknown");
     } else {
       el.textContent = "no API key";
       el.className = "warn";
+      el.title = "Set OPENROUTER_API_KEY";
     }
     return d;
   } catch (e) {

@@ -3,20 +3,28 @@
 Uses environment variables with sensible defaults and validation.
 Industrial-grade: validates all inputs, supports multiple environments.
 """
-from pydantic_settings import BaseSettings
-from pydantic import ConfigDict, Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
 from typing import Optional
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables and .env file."""
 
-    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8",
-                              populate_by_name=True)
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        populate_by_name=True,
+        extra="ignore",
+    )
 
     # --- AI Model Configuration ---
-    ai_provider: str = "openai"  # openai, anthropic, openrouter
-    ai_model: str = "gpt-4"
+    ai_provider: str = "openrouter"  # openai, anthropic, openrouter
+    # Active model routed through OpenRouter. Override with OPENROUTER_MODEL.
+    # Default is a $0-cost free-tier model so the app works without a paid plan.
+    ai_model: str = Field(
+        "meta-llama/llama-3.3-70b-instruct:free", alias="OPENROUTER_MODEL"
+    )
     ai_api_key: Optional[str] = Field(None, alias="OPENROUTER_API_KEY")
     ai_temperature: float = Field(0.7, ge=0.0, le=2.0)
     ai_max_tokens: int = Field(4096, ge=1, le=8192)
@@ -85,6 +93,15 @@ class Settings(BaseSettings):
     def effective_api_key(self) -> Optional[str]:
         """Return the API key to use for the active provider."""
         return self.openrouter_api_key or self.ai_api_key
+
+    @property
+    def openrouter_model(self) -> str:
+        """The model ID routed through OpenRouter.
+
+        Single source of truth so the LLM client, health check, and API all
+        report the same active model.
+        """
+        return self.ai_model
 
 
 settings = Settings()

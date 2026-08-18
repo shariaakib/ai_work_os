@@ -12,7 +12,7 @@ client = OpenAI(
 print("=" * 50)
 print("TEST 1: Normal AI Work OS persona")
 resp = client.chat.completions.create(
-    model="openai/gpt-4o-mini",
+    model=settings.openrouter_model,
     messages=[
         {"role": "system", "content": "You are AI Work OS, an AI-native operating system for professional work. You help users accomplish goals through planning, specialist agents, and task automation. Be direct and helpful."},
         {"role": "user", "content": "hi there"}
