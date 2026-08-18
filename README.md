@@ -44,3 +44,45 @@ pip install -r requirements.txt
 - **Specialist Agents** — Research, Analysis, Writing, Development, etc.
 - **Permissions System** — Safe (auto), Approval (ask), High-risk (confirm)
 - **Model Independence** — Works with Claude, GPT, Gemini, DeepSeek, etc.
+
+## Web Server & Mobile App
+
+The project includes a **FastAPI REST backend** and a **Progressive Web App (PWA)** frontend that can be installed on any device (desktop, Android, iOS).
+
+### Start the Server
+
+```bash
+python app/server.py
+```
+
+The server starts at `http://localhost:8000`. Open it in any browser.
+
+### Install on Mobile (Android/iOS)
+
+1. Open `http://<your-computer-ip>:8000` in Chrome/Safari
+2. Tap the browser menu → **"Add to Home Screen"** or **"Install App"**
+3. The app installs like a native app with its own icon
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Server health check |
+| GET | `/api/agents` | List all specialist agents |
+| POST | `/api/chat` | Chat with AI |
+| POST | `/api/plan` | Create execution plan |
+| POST | `/api/execute` | Execute goal with agents |
+| GET | `/api/memory` | Get all memories |
+| POST | `/api/memory` | Add a memory |
+| DELETE | `/api/memory/{key}` | Delete a memory |
+| POST | `/api/graph/node` | Add work graph node |
+| POST | `/api/graph/relation` | Add work graph relation |
+| POST | `/api/graph/query` | Query the work graph |
+
+### Run Tests
+
+```bash
+pytest tests/ -v
+```
+
+All **39 tests** cover agents, AI manager, work graph, memory, permissions, verification, and LLM client.

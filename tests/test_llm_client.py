@@ -1,33 +1,23 @@
-"""
-Tests for the LLM Client (Phase 2) and AI planning.
+"""Tests for the LLM Client and AI planning.
 
-NOTE: To test the "no key" behavior even though the developer's real
-OPENROUTER_API_KEY exists in .env, we temporarily set it to None.
+To test no-key behavior, we directly create clients with api_key=None
+since pydantic v2 settings may cache .env values.
 """
 
 import sys
 from pathlib import Path
-
 import pytest
 
-# Add project root and src to path
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
-import config.settings as settings_module
 from src.core.ai_manager import AIManager
-from src.core.llm_client import LLMClient
-
-
-@pytest.fixture
-def no_api_key(monkeypatch):
-    """Pretend there is no API key configured anywhere."""
-    monkeypatch.setattr(settings_module.settings, "openrouter_api_key", None)
+from src.core.llm_client import LLMClient, LLMError
 
 
 class TestLLMClient:
-    def test_not_configured_without_key(self, no_api_key):
+    def test_not_configured_without_key(self):
         """Without an API key, the client must refuse to call the AI."""
         client = LLMClient(api_key=None)
         assert client.is_configured() is False
@@ -37,39 +27,31 @@ class TestLLMClient:
         client = LLMClient(api_key="sk-or-test")
         assert client.is_configured() is True
 
-    def test_chat_raises_without_key(self, no_api_key):
+    def test_chat_raises_without_key(self):
         """Calling chat() without a key must raise a helpful error."""
         client = LLMClient(api_key=None)
-        try:
+        with pytest.raises(RuntimeError) as excinfo:
             client.chat(messages=[{"role": "user", "content": "hi"}])
-        except RuntimeError as e:
-            assert "OPENROUTER_API_KEY" in str(e)
-        else:
-            raise AssertionError("Expected RuntimeError")
-
-
+        assert "OPENROUTER_API_KEY" in str(excinfo.value)
 class _FakeLLM:
     """A fake LLM that returns a canned JSON plan (no internet needed)."""
-
     def __init__(self, reply: str):
         self._reply = reply
 
     def is_configured(self) -> bool:
         return True
 
-    def chat(self, messages, system_prompt=None) -> str:
+    def chat(self, messages, system_prompt=None, temperature=None, max_tokens=None) -> str:
         return self._reply
 
 
 class TestAIPlanning:
     def test_parse_valid_json_plan(self):
         manager = AIManager(llm=_FakeLLM(
-            '[{"id": "t1", "description": "Research topic", '
-            '"agent": "research", "depends_on": []}]'
+            '[{"id": "t1", "description": "Research", "agent": "research", "depends_on": []}]'
         ))
         tasks = manager._parse_tasks(
-            '[{"id": "t1", "description": "Research topic", '
-            '"agent": "research", "depends_on": []}]'
+            '[{"id": "t1", "description": "Research", "agent": "research", "depends_on": []}]'
         )
         assert len(tasks) == 1
         assert tasks[0]["agent"] == "research"
@@ -77,8 +59,7 @@ class TestAIPlanning:
     def test_parse_code_fenced_json(self):
         manager = AIManager(llm=_FakeLLM(""))
         tasks = manager._parse_tasks(
-            '```json\n[{"id": "t1", "description": "x", '
-            '"agent": "writer", "depends_on": []}]\n```'
+            '```json\n[{"id": "t1", "description": "x", "agent": "writer", "depends_on": []}]\n```'
         )
         assert len(tasks) == 1
         assert tasks[0]["agent"] == "writer"
@@ -89,9 +70,8 @@ class TestAIPlanning:
 
     def test_create_plan_with_llm_builds_tasks(self):
         fake = _FakeLLM(
-            '[{"id": "t1", "description": "Research", "agent": "research", '
-            '"depends_on": []}, {"id": "t2", "description": "Write report", '
-            '"agent": "writer", "depends_on": ["t1"]}]'
+            '[{"id": "t1", "description": "Research", "agent": "research", "depends_on": []},'
+            '{"id": "t2", "description": "Write report", "agent": "writer", "depends_on": ["t1"]}]'
         )
         manager = AIManager(llm=fake)
         plan = manager.create_plan("Write a report about the market")
@@ -100,7 +80,6 @@ class TestAIPlanning:
         assert plan.tasks[1].depends_on == ["t1"]
 
     def test_create_plan_empty_without_key(self):
-        """No key => plan comes back empty but doesn't crash."""
         manager = AIManager(llm=LLMClient(api_key=None))
         plan = manager.create_plan("Anything")
         assert len(plan.tasks) == 0

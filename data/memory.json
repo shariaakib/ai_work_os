@@ -1,22 +1,11 @@
 {
-  "email_style": {
-    "key": "email_style",
-    "content": "Keep emails short",
+  "test_key": {
+    "key": "test_key",
+    "content": "Test content",
     "category": "preference",
     "tags": [],
     "source": "user",
-    "created_at": "2026-08-18T02:56:51.411466",
-    "updated_at": "2026-08-18T02:56:51.411466"
-  },
-  "pref1": {
-    "key": "pref1",
-    "content": "I like short meetings",
-    "category": "preference",
-    "tags": [
-      "meetings"
-    ],
-    "source": "user",
-    "created_at": "2026-08-18T02:56:51.411466",
-    "updated_at": "2026-08-18T02:56:51.411466"
+    "created_at": "2026-08-19T02:26:33.065330",
+    "updated_at": "2026-08-19T02:26:43.566290"
   }
 }

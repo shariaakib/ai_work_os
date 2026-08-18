@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html lang= en>
+<head><meta charset=UTF-8><meta name=viewport content=width=device-width,initial-scale=1><meta name=theme-color content=#0f0f23><link rel=manifest href=/static/manifest.json><link rel=icon href=/static/icons/icon-192.png><title>AI Work OS</title><link rel=stylesheet href=/static/style.css></head>
+<body>
+<div id=app><header><h1>AI Work OS</h1><span id=status>initializing...</span></header>
+<main><div id=chat-container><div id=messages></div><form id=chat-form><input id=chat-input type=text placeholder=What would you like to do? autocomplete=off><button type=submit>Send</button></form></div><div id=plan-container style=display:none><h3>Plan</h3><div id=plan-output></div></div></main>
+<nav><button class=tab active data-tab=chat>Chat</button><button class=tab data-tab=plan>Plan</button><button class=tab data-tab=agents>Agents</button><button class=tab data-tab=memory>Memory</button></nav></div>
+<script src=/app.js></script></body></html>
