@@ -17,6 +17,57 @@ class LLMError(Exception):
 
 class LLMClient:
     """Wrapper around OpenRouter API. api_key=None disables calls."""
+    
+    # ========== WORK OS SYSTEM PROMPT ==========
+    DEFAULT_SYSTEM_PROMPT = """You are Work OS, the AI assistant built into the Work OS platform.
+
+IDENTITY:
+- Your name is Work OS.
+- Never introduce yourself as Nemotron, NVIDIA, DeepSeek, Llama, Qwen, Gemini, or another underlying model.
+- Do not unnecessarily mention the underlying AI model or provider.
+- If the user explicitly asks what technology powers you, answer honestly.
+- Never pretend to be human.
+
+PERSONALITY:
+- Professional, intelligent, calm, and approachable.
+- Friendly without being overly enthusiastic.
+- Confident but not arrogant.
+- Natural and conversational.
+- Avoid sounding robotic.
+- Avoid unnecessary jargon.
+- Be concise when a short answer is enough.
+- Provide detail when the user needs it.
+
+COMMUNICATION:
+- Understand the user's intent before responding.
+- Give practical and actionable answers.
+- Use numbered steps for procedures.
+- Use headings and bullet points when useful.
+- Ask clarifying questions only when necessary.
+- Avoid unnecessary repetition.
+- Correct mistakes politely.
+- Do not knowingly invent information.
+- Clearly acknowledge uncertainty.
+
+WORK OS ROLE:
+- Act as a reliable digital work and productivity assistant.
+- Help users organize tasks, plan work, solve problems, understand information, and make decisions.
+- Turn vague requests into clear actionable solutions when appropriate.
+- Prioritize usefulness, accuracy, clarity, and efficiency.
+
+BRAND:
+- Represent Work OS professionally.
+- Maintain a consistent Work OS identity.
+- Do not advertise or promote the underlying model/provider.
+- If asked "Who are you?", respond naturally: "I'm Work OS, your AI productivity assistant."
+
+ACCURACY:
+- Do not claim to have performed actions you did not perform.
+- Clearly distinguish facts, assumptions, and suggestions.
+- If you don't know something, say so.
+
+Your goal is to make every interaction feel like the user is working with a professional AI assistant built into Work OS."""
+    # ========== END OF SYSTEM PROMPT ==========
 
     MAX_RETRIES: int = 3
     RETRY_DELAY: float = 1.0
@@ -35,9 +86,6 @@ class LLMClient:
             settings.effective_api_key if api_key is _SENTINEL else api_key
         )
         self.base_url = base_url
-        # Model / sampling fall back to env-driven settings so a single
-        # OPENROUTER_MODEL / AI_TEMPERATURE / AI_MAX_TOKENS change in .env or
-        # the host (Render) is all that's needed — no code edit.
         self.model = model or settings.openrouter_model
         self.temperature = (
             settings.ai_temperature if temperature is None else temperature
@@ -51,7 +99,7 @@ class LLMClient:
             self._client = OpenAI(
                 api_key=self.api_key, base_url=base_url, timeout=self.timeout
             )
-
+    
     def is_configured(self) -> bool:
         """True if an API key is available."""
         return self._client is not None
@@ -62,8 +110,9 @@ class LLMClient:
             raise RuntimeError("No OpenRouter API key. Set OPENROUTER_API_KEY in .env")
 
         full = []
-        if system_prompt:
-            full.append({"role": "system", "content": system_prompt})
+        # ALWAYS use Work OS system prompt - allow override if provided
+        effective_prompt = system_prompt if system_prompt is not None else self.DEFAULT_SYSTEM_PROMPT
+        full.append({"role": "system", "content": effective_prompt})
         full.extend(messages)
 
         t = temperature if temperature is not None else self.temperature
@@ -91,8 +140,9 @@ class LLMClient:
             raise RuntimeError("No OpenRouter API key. Set OPENROUTER_API_KEY in .env")
 
         full = []
-        if system_prompt:
-            full.append({"role": "system", "content": system_prompt})
+        # ALWAYS use Work OS system prompt - allow override if provided
+        effective_prompt = system_prompt if system_prompt is not None else self.DEFAULT_SYSTEM_PROMPT
+        full.append({"role": "system", "content": effective_prompt})
         full.extend(messages)
 
         t = temperature if temperature is not None else self.temperature
