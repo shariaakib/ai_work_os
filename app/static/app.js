@@ -1,106 +1,311 @@
 const API = window.location.origin;
-let currentTab =  chat;
+let currentTab = "chat";
+let busy = false;
+
+function $(id) { return document.getElementById(id); }
+
+async function api(path, options) {
+  const res = await fetch(API + path, options);
+  let data = null;
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    data = await res.json();
+  } else {
+    data = { detail: await res.text() };
+  }
+  if (!res.ok) {
+    const msg = (data && (data.detail || data.message)) || res.statusText;
+    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+  }
+  return data;
+}
 
 async function checkHealth() {
-  try { const r = await fetch(API + /api/health); const d = await r.json();
-    document.getElementById(status).textContent = d.configured ? online : no API key;
-    document.getElementById(status).className = d.configured ? online : ;
- return d; } catch(e) { document.getElementById(status).textContent = offline; return null; }
+  const el = $("status");
+  try {
+    const d = await api("/api/health");
+    if (d.configured) {
+      el.textContent = "online";
+      el.className = "online";
+    } else {
+      el.textContent = "no API key";
+      el.className = "warn";
+    }
+    return d;
+  } catch (e) {
+    el.textContent = "offline";
+    el.className = "err";
+    return null;
+  }
 }
 
 function addMessage(role, text, agent) {
- const div = document.createElement(div);
- div.className = msg  + role;
- if (agent) { const a = document.createElement( div); a.className = agent; a.textContent = agent; div.appendChild(a); }
- const p = document.createElement(div); p.textContent = text; div.appendChild(p);
- document.getElementById(messages).appendChild(div);
- div.scrollIntoView({behavior:smooth});
+  const box = $("messages");
+  if (!box) return;
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  if (agent) {
+    const a = document.createElement("div");
+    a.className = "agent";
+    a.textContent = agent;
+    div.appendChild(a);
+  }
+  const p = document.createElement("div");
+  p.textContent = text;
+  div.appendChild(p);
+  box.appendChild(div);
+  div.scrollIntoView({ behavior: "smooth", block: "end" });
 }
 
-async function sendChat() {
- const input = document.getElementById(chat-input);
- const msg = input.value.trim();
- if (!msg) return;
- input.value = ;
-  addMessage(user, msg);
+function setBusy(on) {
+  busy = on;
+  ["send-btn", "chat-input", "plan-input"].forEach(function (id) {
+    const el = $(id);
+    if (el) el.disabled = on;
+  });
+  document.querySelectorAll("#plan-form button").forEach(function (b) {
+    b.disabled = on;
+  });
+}
+
+async function sendChat(e) {
+  if (e) e.preventDefault();
+  if (busy) return;
+  const input = $("chat-input");
+  const msg = (input.value || "").trim();
+  if (!msg) return;
+  input.value = "";
+  addMessage("user", msg);
+  setBusy(true);
   try {
-    const r = await fetch(API + /api/chat, { method: POST, headers: {Content-Type:application/json}, body: JSON.stringify({message: msg}) });
-    const d = await r.json();
-    addMessage(ai, d.reply || No response);
-  } catch(e) { addMessage(ai, Error:  + e.message); }
-}
-
-async function sendPlan() {
-  const goal = document.getElementById( chat-input).value.trim();
-  if (!goal) return;
-  addMessage(user, Plan:  + goal);
-  try {
-    const r = await fetch(API +  /api/execute, { method: POST, headers: {Content-Type:application/json}, body: JSON.stringify({goal: goal}) });
-    const d = await r.json();
-    showPlan(d);
-    addMessage(ai, Plan completed:  + d.status);
-  } catch(e) { addMessage( ai, Error:  + e.message); }
-}
-
-function showPlan(data) {
-  const out = document.getElementById( plan-output);
-  out.innerHTML = ;
- if (data.tasks) {
- data.tasks.forEach(t => {
- const div = document.createElement(div);
- div.className = task;
- div.innerHTML = <span class=agent-tag> + (t.agent_type||) + </span><br> + (t.task_id||) + :  + (t.description||);
-      out.appendChild(div);
+    const d = await api("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg }),
     });
+    addMessage("ai", d.reply || d.response || "No response");
+  } catch (err) {
+    addMessage("ai", "Error: " + err.message);
+  } finally {
+    setBusy(false);
+    input.focus();
+  }
+}
+
+function renderPlan(data) {
+  const out = $("plan-output");
+  if (!out) return;
+  out.innerHTML = "";
+  const head = document.createElement("div");
+  head.className = "plan-head";
+  head.innerHTML =
+    "<strong>Goal:</strong> " +
+    escapeHtml(data.goal || "") +
+    " <span class=\"badge\">" +
+    escapeHtml(data.status || "") +
+    "</span>";
+  out.appendChild(head);
+
+  const tasks = data.tasks || [];
+  if (!tasks.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent =
+      "No tasks returned. Set OPENROUTER_API_KEY if the LLM is unconfigured.";
+    out.appendChild(empty);
+    return;
+  }
+
+  tasks.forEach(function (t) {
+    const div = document.createElement("div");
+    div.className = "task";
+    const agent = t.agent_type || t.agent || "";
+    const desc = t.description || "";
+    const tid = t.task_id || t.id || "";
+    let body = "<span class=\"agent-tag\">" + escapeHtml(agent) + "</span>";
+    body += "<div class=\"task-id\">" + escapeHtml(tid) + "</div>";
+    body += "<div>" + escapeHtml(desc) + "</div>";
+    if (t.result) {
+      const content =
+        typeof t.result === "object"
+          ? t.result.content || t.result.findings || JSON.stringify(t.result, null, 2)
+          : String(t.result);
+      body += "<pre class=\"result\">" + escapeHtml(String(content).slice(0, 4000)) + "</pre>";
+    }
+    if (t.verification) {
+      body +=
+        "<div class=\"verify\">verify: " +
+        (t.verification.passed ? "pass" : "issues") +
+        " (" +
+        (t.verification.score != null ? t.verification.score : "?") +
+        ")</div>";
+    }
+    div.innerHTML = body;
+    out.appendChild(div);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function runPlan(mode) {
+  if (busy) return;
+  const input = $("plan-input");
+  const goal = (input.value || "").trim();
+  if (!goal) return;
+  setBusy(true);
+  const out = $("plan-output");
+  if (out) out.innerHTML = "<p class=\"muted\">Working...</p>";
+  try {
+    const path = mode === "execute" ? "/api/execute" : "/api/plan";
+    const d = await api(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal: goal }),
+    });
+    renderPlan(d);
+  } catch (err) {
+    if (out) out.innerHTML = "<p class=\"err-text\">Error: " + escapeHtml(err.message) + "</p>";
+  } finally {
+    setBusy(false);
   }
 }
 
 async function loadAgents() {
-  try { const r = await fetch(API +  /api/agents); const d = await r.json();
-    const grid = document.createElement(div); grid.className = agents-grid;
-    d.agents.forEach(a => {
-      const card = document.createElement(div); card.className = agent-card;
-      card.innerHTML = <h4> + a.name + </h4><p> + a.description + </p><div class=caps> + a.capabilities.map(c => <span class=cap>+c+</span>).join() + </div>;
- grid.appendChild(card);
- });
- const main = document.querySelector(main);
- main.innerHTML = ; main.appendChild(grid);
-  } catch(e) {}
+  const grid = $("agents-grid");
+  if (!grid) return;
+  grid.innerHTML = "<p class=\"muted\">Loading...</p>";
+  try {
+    const d = await api("/api/agents");
+    grid.innerHTML = "";
+    (d.agents || []).forEach(function (a) {
+      const card = document.createElement("div");
+      card.className = "agent-card";
+      const caps = (a.capabilities || [])
+        .map(function (c) {
+          return "<span class=\"cap\">" + escapeHtml(c) + "</span>";
+        })
+        .join("");
+      card.innerHTML =
+        "<h4>" +
+        escapeHtml(a.name || a.type) +
+        "</h4><p>" +
+        escapeHtml(a.description || "") +
+        "</p><div class=\"caps\">" +
+        caps +
+        "</div>";
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    grid.innerHTML = "<p class=\"err-text\">" + escapeHtml(err.message) + "</p>";
+  }
 }
 
 async function loadMemory() {
-  try { const r = await fetch(API + /api/memory); const d = await r.json();
-    const main = document.querySelector(main);
-    main.innerHTML = ;
- d.items.forEach(i => {
- const div = document.createElement(div); div.className = memory-item;
- div.innerHTML = <div class=key> + i.key + </div><div class=val> + i.content + </div>;
- main.appendChild(div);
- });
- } catch(e) {}
+  const list = $("memory-list");
+  if (!list) return;
+  list.innerHTML = "<p class=\"muted\">Loading...</p>";
+  try {
+    const d = await api("/api/memory");
+    list.innerHTML = "";
+    const items = d.items || [];
+    if (!items.length) {
+      list.innerHTML = "<p class=\"muted\">No memories yet.</p>";
+      return;
+    }
+    items.forEach(function (i) {
+      const div = document.createElement("div");
+      div.className = "memory-item";
+      div.innerHTML =
+        "<div class=\"key\">" +
+        escapeHtml(i.key) +
+        "</div><div class=\"val\">" +
+        escapeHtml(i.content) +
+        "</div><button type=\"button\" class=\"link-btn\" data-key=\"" +
+        escapeHtml(i.key) +
+        "\">Forget</button>";
+      list.appendChild(div);
+    });
+    list.querySelectorAll(".link-btn").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        try {
+          await api("/api/memory/" + encodeURIComponent(btn.dataset.key), {
+            method: "DELETE",
+          });
+          loadMemory();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  } catch (err) {
+    list.innerHTML = "<p class=\"err-text\">" + escapeHtml(err.message) + "</p>";
+  }
+}
+
+async function addMemory(e) {
+  e.preventDefault();
+  const key = ($("mem-key").value || "").trim();
+  const content = ($("mem-content").value || "").trim();
+  if (!key || !content) return;
+  try {
+    await api("/api/memory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: key, content: content, category: "preference" }),
+    });
+    $("mem-key").value = "";
+    $("mem-content").value = "";
+    loadMemory();
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
 function switchTab(tab) {
- currentTab = tab;
- document.querySelectorAll(.tab).forEach(t => t.classList.toggle(active, t.dataset.tab === tab));
- if (tab === chat) {
- document.querySelector(main).innerHTML = ;
-    const mc = document.createElement(div); mc.id = chat-container;
-    mc.innerHTML = <div id=messages></div><form id=chat-form><input id=chat-input type=text placeholder=\What would you like to do?" autocomplete=off><button type=submit>Send</button></form>;
- document.querySelector(main).appendChild(mc);
- document.getElementById(chat-form).addEventListener(submit, e => { e.preventDefault(); currentTab === plan ? sendPlan() : sendChat(); });
- } else if (tab === plan) {
- document.querySelector(main).innerHTML = <div id=plan-output></div>;
- const inp = document.getElementById(chat-input);
- if (inp) sendPlan();
- } else if (tab === agents) { loadAgents(); }
- else if (tab === memory) { loadMemory(); }
+  currentTab = tab;
+  document.querySelectorAll(".tab").forEach(function (t) {
+    t.classList.toggle("active", t.dataset.tab === tab);
+  });
+  document.querySelectorAll(".view").forEach(function (v) {
+    v.classList.toggle("active", v.id === "view-" + tab);
+  });
+  if (tab === "agents") loadAgents();
+  if (tab === "memory") loadMemory();
 }
 
-document.addEventListener(DOMContentLoaded, () => {
- checkHealth();
- document.getElementById(chat-form).addEventListener(submit, e => { e.preventDefault(); sendChat(); });
- document.querySelectorAll(.tab).forEach(t => t.addEventListener(click, () => switchTab(t.dataset.tab)));
+document.addEventListener("DOMContentLoaded", function () {
+  checkHealth();
+  setInterval(checkHealth, 60000);
+
+  const chatForm = $("chat-form");
+  if (chatForm) chatForm.addEventListener("submit", sendChat);
+
+  const planForm = $("plan-form");
+  if (planForm) {
+    planForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const mode =
+        (e.submitter && e.submitter.dataset && e.submitter.dataset.mode) || "plan";
+      runPlan(mode);
+    });
+  }
+
+  const memForm = $("memory-form");
+  if (memForm) memForm.addEventListener("submit", addMemory);
+
+  document.querySelectorAll(".tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      switchTab(t.dataset.tab);
+    });
+  });
 });
 
-if (serviceWorker in navigator) { navigator.serviceWorker.register(/sw.js); }
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(function () {});
+}

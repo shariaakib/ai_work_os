@@ -1,16 +1,19 @@
 services:
   - type: web
     name: ai-work-os
-    env: python
+    runtime: python
     plan: free
+    region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app.server:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 2 --timeout 120
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: ENVIRONMENT
-        value: production
+    startCommand: gunicorn app.server:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-level info
     healthCheckPath: /api/health
     autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: OPENROUTER_API_KEY
+        sync: false

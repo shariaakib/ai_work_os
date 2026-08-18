@@ -1,88 +1,60 @@
 # AI Work OS
 
-An AI-native Work OS — not another chatbot, not just a collection of AI tools, and not simply a prettier ChatGPT interface.
+An AI-native Work OS — not another chatbot. Humans describe outcomes; specialist agents plan and execute.
 
-## The Vision
+**Live (Render free tier):** https://ai-work-os.onrender.com  
+**Repo:** https://github.com/shariaakib/ai_work_os
 
-Instead of humans learning how to operate dozens of software applications, humans describe what they want to accomplish, and AI figures out how to get it done.
+> Free-tier cold start can take **30–60 seconds** after idle. Wait, then hit /api/health again.
 
-**From apps to outcomes. From software users to AI-assisted workers. From individual AI chats to an intelligent workplace.**
+## Architecture
 
-## Project Structure
+`
+ai_work_os/
+├── app/server.py + app/static/   # FastAPI API + PWA
+├── src/core|agents|permissions|verification|tools
+├── config/settings.py
+├── tests/
+├── render.yaml | Procfile | requirements.txt
+└── .github/workflows/ci.yml
+`
 
-```
-ai-work-os/
-├── src/
-│   ├── core/           # Core system: AI Manager, Work Graph, Memory
-│   ├── agents/         # Specialist AI workers
-│   ├── tools/          # Tool integrations (web, docs, APIs)
-│   ├── permissions/    # Permission & safety system
-│   └── verification/   # Result verification
-├── config/             # Configuration
-├── tests/              # Test suite
-└── VISION.md           # Full vision document
-```
+## Quick start (local)
 
-## Getting Started
-
-```bash
-# Create virtual environment
+`ash
 py -m venv .venv
+.venv\\Scripts\\python.exe -m pip install -r requirements.txt
+copy .env.example .env
+# set OPENROUTER_API_KEY=sk-or-...
+.venv\\Scripts\\python.exe app/server.py
+# open http://localhost:8000
+`
 
-# Activate it
-.venv\Scripts\activate
+## Production (Render)
 
-# Install dependencies
-pip install -r requirements.txt
-```
+1. Connect GitHub repo; Blueprint uses 
+ender.yaml.
+2. Set **Environment → OPENROUTER_API_KEY**.
+3. Start: one gunicorn worker + UvicornWorker; health /api/health.
+4. Keep main and master in sync until default branch is settled.
 
-## Core Concepts
+Health JSON includes status, ersion, configured, environment, gents.
 
-- **AI Manager** — Coordinates specialist agents to accomplish user goals
-- **Work Graph** — Understands relationships between work items
-- **Persistent Memory** — Learns user preferences and context
-- **Specialist Agents** — Research, Analysis, Writing, Development, etc.
-- **Permissions System** — Safe (auto), Approval (ask), High-risk (confirm)
-- **Model Independence** — Works with Claude, GPT, Gemini, DeepSeek, etc.
+## API (summary)
 
-## Web Server & Mobile App
+- GET /api/health · GET /api/agents
+- POST /api/chat → {response, reply} (503 if no key)
+- POST /api/plan · POST /api/execute (plan then execute)
+- Memory + work graph under /api/memory and /api/graph/*
 
-The project includes a **FastAPI REST backend** and a **Progressive Web App (PWA)** frontend that can be installed on any device (desktop, Android, iOS).
+## Tests
 
-### Start the Server
+`ash
+.venv\\Scripts\\python.exe -m pytest tests/ -v
+`
 
-```bash
-python app/server.py
-```
+CI: .github/workflows/ci.yml (Python 3.11 + 3.12).
 
-The server starts at `http://localhost:8000`. Open it in any browser.
+## Design
 
-### Install on Mobile (Android/iOS)
-
-1. Open `http://<your-computer-ip>:8000` in Chrome/Safari
-2. Tap the browser menu → **"Add to Home Screen"** or **"Install App"**
-3. The app installs like a native app with its own icon
-
-### API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Server health check |
-| GET | `/api/agents` | List all specialist agents |
-| POST | `/api/chat` | Chat with AI |
-| POST | `/api/plan` | Create execution plan |
-| POST | `/api/execute` | Execute goal with agents |
-| GET | `/api/memory` | Get all memories |
-| POST | `/api/memory` | Add a memory |
-| DELETE | `/api/memory/{key}` | Delete a memory |
-| POST | `/api/graph/node` | Add work graph node |
-| POST | `/api/graph/relation` | Add work graph relation |
-| POST | `/api/graph/query` | Query the work graph |
-
-### Run Tests
-
-```bash
-pytest tests/ -v
-```
-
-All **39 tests** cover agents, AI manager, work graph, memory, permissions, verification, and LLM client.
+Outcomes over apps · OpenRouter model independence · user-owned memory · permissions · free-tier friendly (1 worker, slim deps).

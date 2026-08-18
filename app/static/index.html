@@ -1,8 +1,60 @@
 <!DOCTYPE html>
-<html lang= en>
-<head><meta charset=UTF-8><meta name=viewport content=width=device-width,initial-scale=1><meta name=theme-color content=#0f0f23><link rel=manifest href=/static/manifest.json><link rel=icon href=/static/icons/icon-192.png><title>AI Work OS</title><link rel=stylesheet href=/static/style.css></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f0f23" />
+  <meta name="description" content="AI Work OS multi-agent work operating system" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml" />
+  <title>AI Work OS</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
 <body>
-<div id=app><header><h1>AI Work OS</h1><span id=status>initializing...</span></header>
-<main><div id=chat-container><div id=messages></div><form id=chat-form><input id=chat-input type=text placeholder=What would you like to do? autocomplete=off><button type=submit>Send</button></form></div><div id=plan-container style=display:none><h3>Plan</h3><div id=plan-output></div></div></main>
-<nav><button class=tab active data-tab=chat>Chat</button><button class=tab data-tab=plan>Plan</button><button class=tab data-tab=agents>Agents</button><button class=tab data-tab=memory>Memory</button></nav></div>
-<script src=/app.js></script></body></html>
+  <div id="app">
+    <header>
+      <h1>AI Work OS</h1>
+      <span id="status">connecting...</span>
+    </header>
+    <main id="main">
+      <section id="view-chat" class="view active">
+        <div id="messages" aria-live="polite"></div>
+        <form id="chat-form" autocomplete="off">
+          <input id="chat-input" type="text" placeholder="What would you like to do?" maxlength="4000" required />
+          <button type="submit" id="send-btn">Send</button>
+        </form>
+        <div class="hint">Tip: use <strong>Plan</strong> to break a goal into specialist tasks.</div>
+      </section>
+      <section id="view-plan" class="view">
+        <form id="plan-form" autocomplete="off">
+          <input id="plan-input" type="text" placeholder="Describe a goal to plan and execute..." maxlength="4000" required />
+          <div class="btn-row">
+            <button type="submit" data-mode="plan">Plan only</button>
+            <button type="submit" data-mode="execute" class="primary">Plan + Execute</button>
+          </div>
+        </form>
+        <div id="plan-output"></div>
+      </section>
+      <section id="view-agents" class="view">
+        <div id="agents-grid" class="agents-grid"></div>
+      </section>
+      <section id="view-memory" class="view">
+        <form id="memory-form" class="memory-form" autocomplete="off">
+          <input id="mem-key" type="text" placeholder="Key" maxlength="200" required />
+          <input id="mem-content" type="text" placeholder="What should I remember?" maxlength="2000" required />
+          <button type="submit">Remember</button>
+        </form>
+        <div id="memory-list"></div>
+      </section>
+    </main>
+    <nav>
+      <button class="tab active" data-tab="chat" type="button">Chat</button>
+      <button class="tab" data-tab="plan" type="button">Plan</button>
+      <button class="tab" data-tab="agents" type="button">Agents</button>
+      <button class="tab" data-tab="memory" type="button">Memory</button>
+    </nav>
+  </div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
