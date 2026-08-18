@@ -31,3 +31,11 @@ Thumbs.db
 *.db
 *.sqlite
 logs/
+
+# Temp / test artifacts
+_*.log
+_*.txt
+_*.py
+test_results.txt
+test_api_results.txt
+.pytest_cache/
